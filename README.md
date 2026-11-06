@@ -20,7 +20,10 @@ Viết bằng Expo (React Native): một mã nguồn chạy trên cả Android l
   - chặn chụp/ghi màn hình (Android chặn hẳn; iOS phát hiện và ghi lại);
   - giữ màn hình sáng, chặn nút quay lại;
   - ghi lại mỗi lần rời app, quay lại app, chụp màn hình.
-- Nộp bài có **mã biên nhận**. Khi trường công bố điểm: xem điểm, đúng/sai từng câu, điểm theo chương.
+- Nộp bài có **mã biên nhận**. Khi trường công bố điểm: xem điểm, đáp án đúng, đúng/sai từng câu, điểm theo chương.
+- **Bảng điểm**: điểm trung bình, xếp loại, điểm theo môn và từng bài; xuất Excel (CSV).
+- **Phúc khảo**: gửi đơn cho một câu hoặc cả bài, theo dõi trạng thái và câu trả lời.
+- **Luyện tập**: làm các đề trường mở để ôn, chấm ngay, xem đáp án; không tính vào bảng điểm.
 - Hỏi đáp: nhắn với kĩ thuật viên, giáo viên.
 
 **Cán bộ coi thi (CBCT)**
@@ -37,6 +40,7 @@ Viết bằng Expo (React Native): một mã nguồn chạy trên cả Android l
   - Ô viền đỏ: em đang ở ngoài app. Ô viền vàng: có dấu hiệu nghi ngờ.
   - Bấm vào một em: xem màn hình bài làm đầy đủ, lịch sử từng thao tác. Bấm một dòng lịch sử để **xem lại màn hình lúc đó**.
   - Ghi biên bản vi phạm ngay trên màn hình đó.
+- **Cộng giờ** cho một em hoặc cả phòng (máy hỏng, sự cố), có ghi lí do.
 
 **Quản lí ca thi (tổ trưởng, BGH)**
 - Tạo ca thi: chọn đề, chọn lớp; app tự chia phòng theo tên (ABC tiếng Việt: tên → họ đệm) và cấp số báo danh.
@@ -45,12 +49,17 @@ Viết bằng Expo (React Native): một mã nguồn chạy trên cả Android l
 - Mã niêm phong và *biên bản giao nhận đề*: gửi qua Zalo/email bằng nút chia sẻ của điện thoại.
 - Theo dõi phát đề: từng phòng ở bước nào, ai đã nhận phòng, phát lúc mấy giờ, chậm bao lâu so với lệnh, bao nhiêu máy đã nhận đề.
 - Lịch sử làm bài: xếp theo mức nghi ngờ kèm lí do, và các cặp thí sinh cùng phòng trùng nhiều đáp án sai.
-- Kết quả: phổ điểm, danh sách, chấm tự luận, công bố/thu hồi điểm.
+- Sửa ca thi khi chưa bắt đầu; xoá ca nháp. **Cho làm lại** bài của một em khi ca đang chạy.
+- Kết quả: phổ điểm, danh sách, chấm tự luận, công bố/thu hồi điểm; thống kê **từng câu** (độ khó, phương án nhiễu) và **theo lớp**; xuất Excel.
+- **Bảng điểm lớp**: học sinh × các bài, điểm trung bình, xếp loại, trung bình lớp; lọc theo môn; xuất Excel.
+- **Thống kê** toàn trường theo lớp, theo ca. **Xử lí phúc khảo**: chấp nhận hoặc giữ nguyên, kèm trả lời.
+- Mở/đóng đề cho học sinh luyện tập.
 - Ngân hàng câu hỏi (thêm, sửa, xoá); soạn đề từ ngân hàng.
 
 **Kĩ thuật viên, BGH, quản trị**
 - Theo dõi mọi phòng. Kĩ thuật viên **chỉ thấy khung bài**: số câu, phương án đã chọn, không thấy nội dung đề.
-- Danh sách học sinh theo lớp, cấp tài khoản học sinh.
+- Danh sách học sinh theo lớp, cấp tài khoản học sinh; **nhập cả lớp** bằng cách dán danh sách từ Excel (tự đặt tài khoản, mật khẩu, xuất file tài khoản).
+- **Hồ sơ học sinh**: bảng điểm, luyện tập, vi phạm, nhắn tin, đặt lại mật khẩu.
 - Gửi thông báo (tới mọi học sinh hoặc thí sinh một ca), trả lời tin nhắn.
 - Quản trị: tài khoản cán bộ, vai trò.
 
