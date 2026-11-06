@@ -117,7 +117,7 @@ export async function handle(name: string, d: any, c: Ctx, tx: Tx): Promise<any>
       if (!studs.length) fail('Các lớp đã chọn chưa có học sinh');
       const size = Math.max(1, Math.min(60, Number(d.roomSize) || 24));
       const rooms = splitRooms(studs.map(x => ({ uid: x.uid, name: x.name })), size, d.places || []);
-      const sid = 'S' + now.toString(36).toUpperCase();
+      const sid = 'S' + now.toString(36).toUpperCase() + Math.random().toString(36).slice(2, 4).toUpperCase();
       const qs = exam!.questions;
       const s: SessionDoc = {
         id: sid, name: String(d.name || exam!.title).slice(0, 120), examId: exam!.id, examTitle: exam!.title, subject: exam!.subject,
@@ -208,7 +208,11 @@ export async function handle(name: string, d: any, c: Ctx, tx: Tx): Promise<any>
       mustManage(u);
       const s = await loadSession(tx, d.sid);
       if (s.status !== 'closed') fail('Kết thúc ca thi rồi mới công bố điểm');
+      const key = await tx.get<{ questions: KeyedQuestion[] }>('keys/' + d.sid);
       tx.update('sessions/' + s.id, { published: !s.published, log: sessionLog(s, [now, u.uid, 'congbo', s.published ? 'thu hồi' : '']) });
+      // đáp án công bố cùng điểm (học sinh của ca đọc được), thu hồi thì xoá
+      if (!s.published) tx.set('pubkeys/' + s.id, { sid: s.id, studentIds: s.studentIds, questions: key!.questions.map(q => ({ id: q.id, type: q.type, answer: q.answer, points: q.points })) });
+      else tx.del('pubkeys/' + s.id);
       return { published: !s.published };
     }
     case 'gradeEssay': {
@@ -290,6 +294,112 @@ export async function handle(name: string, d: any, c: Ctx, tx: Tx): Promise<any>
       const id = 'N' + now.toString(36);
       tx.set('notices/' + id, { id, title: String(d.title).slice(0, 120), body: String(d.body || '').slice(0, 2000), sid: d.sid || null, to: d.sid ? 'session' : 'all', studentIds: d.studentIds || null, by: u.uid, byName: u.name, at: now });
       return { id };
+    }
+
+    // ============================================================ điều chỉnh trong giờ thi
+    case 'extend': { // cộng giờ cho một em hoặc cả phòng (sự cố mất điện, hỏng máy…)
+      const s = await loadSession(tx, d.sid);
+      const mins = Math.round(Number(d.minutes) || 0);
+      if (!mins || mins < -30 || mins > 120) fail('Số phút từ -30 đến 120');
+      if (!String(d.reason || '').trim()) fail('Ghi lí do cộng giờ');
+      if (s.status !== 'running') fail('Ca thi không trong giờ làm bài');
+      const rid = d.rid || (await tx.get<AttemptDoc>('attempts/' + attemptId(d.sid, d.uid)))?.roomId;
+      if (!rid) fail('Không có bài làm');
+      const r = await loadRoom(tx, d.sid, rid);
+      if (!has(u, 'quanli', 'bgh') && !r.proctors.includes(u.uid)) fail('Chỉ CBCT phòng này hoặc quản lí ca được cộng giờ');
+      const atts = d.uid ? [await tx.get<AttemptDoc>('attempts/' + attemptId(d.sid, d.uid))] : await roomAttempts(tx, d.sid, rid);
+      let n = 0;
+      for (const a of atts) if (a && a.startedAt && !a.submitted && a.deadline) { tx.update('attempts/' + a.id, { deadline: a.deadline + mins * 60000, extraMin: (a.extraMin || 0) + mins }); n++; }
+      const log = r.log.slice(-299); log.push([now, u.uid, 'conggio', `${d.uid ? (atts[0]?.name || d.uid) : 'cả phòng'} ${mins > 0 ? '+' : ''}${mins} phút · ${String(d.reason).slice(0, 120)}`]);
+      tx.update(`sessions/${d.sid}/rooms/${rid}`, { log });
+      return { n };
+    }
+    case 'resetAttempt': { // cho làm lại từ đầu (máy hỏng, nhầm thí sinh…)
+      mustManage(u);
+      const s = await loadSession(tx, d.sid);
+      const a = await tx.get<AttemptDoc>('attempts/' + attemptId(d.sid, d.uid));
+      if (!a) fail('Không có bài làm');
+      if (s.status !== 'running') fail('Chỉ cho làm lại khi ca đang thi');
+      if (!String(d.reason || '').trim()) fail('Ghi lí do');
+      const r = await loadRoom(tx, d.sid, a!.roomId);
+      tx.update('attempts/' + a!.id, { startedAt: null, deadline: null, answers: {}, flags: {}, cur: 0, order: [], submitted: false, submittedAt: null, receipt: null, score: null, perQ: {}, away: false, metrics: blankMetrics(), tail: [], live: blankLive(), resets: ((a as any).resets || 0) + 1 });
+      const roll = { ...r.roll, [a!.uid]: 'vang' as const };
+      const log = r.log.slice(-299); log.push([now, u.uid, 'lamlai', `${a!.name} · ${String(d.reason).slice(0, 120)}`]);
+      tx.update(`sessions/${d.sid}/rooms/${a!.roomId}`, { roll, log });
+      return { ok: true };
+    }
+    case 'updateSession': {
+      mustManage(u);
+      const s = await loadSession(tx, d.sid);
+      if (s.status === 'running' || s.status === 'closed') fail('Ca đã bắt đầu, không sửa được');
+      const p: any = {};
+      if (d.name) p.name = String(d.name).slice(0, 120);
+      if (d.date) { if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date)) fail('Ngày dạng năm-tháng-ngày'); p.date = d.date; }
+      if (d.start) { if (!/^\d{1,2}:\d{2}$/.test(d.start)) fail('Giờ dạng 07:30'); p.start = d.start; }
+      if (d.durationMin) p.durationMin = Math.max(5, Math.min(300, Number(d.durationMin)));
+      if (d.lateMin !== undefined) p.lateMin = Math.max(0, Math.min(60, Number(d.lateMin)));
+      tx.update('sessions/' + s.id, p);
+      return { ok: true };
+    }
+    case 'deleteSession': {
+      mustManage(u);
+      const s = await loadSession(tx, d.sid);
+      if (s.status !== 'draft') fail('Chỉ xoá được ca chưa mở phòng chờ');
+      const rooms = await tx.query<RoomDoc>(`sessions/${d.sid}/rooms`, []);
+      for (const r of rooms) tx.del(`sessions/${d.sid}/rooms/${r.id}`);
+      tx.del(`sessions/${d.sid}/paper/main`); tx.del('keys/' + d.sid); tx.del('sessions/' + d.sid);
+      return { ok: true };
+    }
+
+    // ============================================================ luyện tập (không tính điểm, xem đáp án ngay)
+    case 'setPractice': {
+      mustManage(u);
+      const e = await tx.get<any>('exams/' + d.eid);
+      if (!e) fail('Không có đề');
+      if (d.on) tx.set('practiceList/' + d.eid, { id: e.id, title: e.title, subject: e.subject, durationMin: e.durationMin, count: e.questions.length, classNames: d.classNames || [], at: now });
+      else tx.del('practiceList/' + d.eid);
+      tx.update('exams/' + d.eid, { practice: !!d.on });
+      return { ok: true };
+    }
+    case 'practiceStart': {
+      const pl = await tx.get<any>('practiceList/' + d.eid);
+      const e = await tx.get<any>('exams/' + d.eid);
+      if (!pl || !e) fail('Đề luyện tập không còn mở');
+      if (pl.classNames?.length && !pl.classNames.includes(u.className)) fail('Đề này không dành cho lớp em');
+      const id = `${c.uid}_${d.eid}_${now.toString(36)}`;
+      const qs: KeyedQuestion[] = e.questions;
+      const order = orderFor(qs, id)(c.uid);
+      tx.set('practice/' + id, { id, uid: c.uid, eid: d.eid, title: e.title, subject: e.subject, startedAt: now, deadline: now + e.durationMin * 60000, order, questions: qs.map(({ answer, ...q }) => q), answers: {}, submitted: false });
+      tx.set('practiceKeys/' + id, { questions: qs });
+      return { id };
+    }
+    case 'practiceSubmit': {
+      const p = await tx.get<any>('practice/' + d.id);
+      const k = await tx.get<{ questions: KeyedQuestion[] }>('practiceKeys/' + d.id);
+      if (!p || p.uid !== c.uid) fail('Không có bài luyện tập');
+      if (p.submitted) return { ok: true };
+      const answers = { ...(d.answers || {}) };
+      const g = grade(k!.questions, answers);
+      tx.update('practice/' + d.id, { answers, submitted: true, submittedAt: now, score: g.score, correct: g.correct, wrong: g.wrong, blank: g.blank, perQ: g.perQ, key: k!.questions.map(q => ({ id: q.id, answer: q.answer })) });
+      return { score: g.score };
+    }
+
+    // ============================================================ phúc khảo
+    case 'appeal': {
+      const s = await loadSession(tx, d.sid);
+      const a = await tx.get<AttemptDoc>('attempts/' + attemptId(d.sid, c.uid));
+      if (!a || !s.published) fail('Chỉ đề nghị phúc khảo sau khi công bố điểm');
+      if (!String(d.note || '').trim()) fail('Ghi lí do đề nghị phúc khảo');
+      const id = 'P' + now.toString(36) + c.uid.slice(-4);
+      tx.set('appeals/' + id, { id, sid: d.sid, sessionName: s.name, uid: c.uid, name: a!.name, className: a!.className, qid: d.qid || null, qno: d.qno || null, note: String(d.note).slice(0, 1000), status: 'cho', at: now });
+      return { id };
+    }
+    case 'appealReply': {
+      mustManage(u);
+      const p = await tx.get<any>('appeals/' + d.id);
+      if (!p) fail('Không có đơn phúc khảo');
+      tx.update('appeals/' + d.id, { status: d.accept ? 'chapnhan' : 'giunguyen', reply: String(d.reply || '').slice(0, 1000), by: u.uid, byName: u.name, repliedAt: now });
+      return { ok: true };
     }
   }
   fail('Không có chức năng ' + name);

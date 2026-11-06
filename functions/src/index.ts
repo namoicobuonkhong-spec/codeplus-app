@@ -34,7 +34,7 @@ function wrapTx(t: Transaction): Tx {
   };
 }
 
-const NAMES = new Set(['presence', 'progress', 'submit', 'createSession', 'assignProctors', 'openSession', 'release', 'phatAll', 'closeSession', 'publish', 'gradeEssay', 'checkin', 'roll', 'request', 'confirm', 'force', 'cancel', 'late', 'incident', 'notice']);
+const NAMES = new Set(['presence', 'progress', 'submit', 'createSession', 'assignProctors', 'openSession', 'release', 'phatAll', 'closeSession', 'publish', 'gradeEssay', 'checkin', 'roll', 'request', 'confirm', 'force', 'cancel', 'late', 'incident', 'notice', 'extend', 'resetAttempt', 'updateSession', 'deleteSession', 'setPractice', 'practiceStart', 'practiceSubmit', 'appeal', 'appealReply']);
 
 export const api = onCall({ cors: true, memory: '256MiB', concurrency: 80 }, async req => {
   if (!req.auth) throw new HttpsError('unauthenticated', 'Chưa đăng nhập');
@@ -74,6 +74,21 @@ export const createUser = onCall({ cors: true }, async req => {
     if (e?.code === 'auth/email-already-exists') throw new HttpsError('already-exists', 'Tên đăng nhập đã có');
     throw new HttpsError('internal', e?.message || String(e));
   }
+});
+
+/** Đặt lại mật khẩu: học sinh (kĩ thuật viên, BGH, quản trị), cán bộ (quản trị). */
+export const resetPassword = onCall({ cors: true }, async req => {
+  if (!req.auth) throw new HttpsError('unauthenticated', 'Chưa đăng nhập');
+  const me = (await db.doc('users/' + req.auth.uid).get()).data() as UserDoc | undefined;
+  const { uid, password } = req.data as { uid: string; password: string };
+  const target = (await db.doc('users/' + uid).get()).data() as UserDoc | undefined;
+  if (!target) throw new HttpsError('not-found', 'Không có tài khoản');
+  const roles = me?.staffRoles || [];
+  const ok = target.role === 'student' ? roles.some(r => ['admin', 'kythuat', 'bgh'].includes(r)) : roles.includes('admin');
+  if (!ok) throw new HttpsError('permission-denied', 'Không có quyền đặt lại mật khẩu tài khoản này');
+  if (String(password || '').length < 6) throw new HttpsError('invalid-argument', 'Mật khẩu cần ít nhất 6 kí tự');
+  await getAuth().updateUser(uid, { password });
+  return { ok: true };
 });
 
 /** Hết giờ mà máy thí sinh chưa nộp (mất mạng, hết pin…): máy chủ tự nộp bài đã lưu. */

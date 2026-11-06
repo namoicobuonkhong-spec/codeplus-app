@@ -71,6 +71,17 @@ export default function CaHub() {
       </KpiRow>
 
       {mg && s.status === 'draft' && <Note kind="info" text="Phân công cán bộ coi thi cho từng phòng rồi mở phòng chờ. Khi mở, học sinh thấy phòng, số báo danh và vào phòng chờ được." />}
+      {mg && (s.status === 'draft' || s.status === 'waiting') && <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Btn small tone="cb" kind="secondary" title="Sửa giờ, thời gian" icon="create-outline" style={{ flex: 1 }} onPress={async () => {
+          const r = await formBox({ title: 'Sửa ca thi', tone: 'cb', ok: 'Lưu', fields: [{ key: 'name', label: 'Tên ca', value: s.name }, { key: 'date', label: 'Ngày (năm-tháng-ngày)', value: s.date }, { key: 'start', label: 'Giờ bắt đầu', value: s.start }, { key: 'dur', label: 'Thời gian làm bài (phút)', value: String(s.durationMin), keyboard: 'numeric' }, { key: 'late', label: 'Đến muộn tối đa (phút)', value: String(s.lateMin), keyboard: 'numeric' }],
+            run: async v => { await api.call('updateSession', { sid, name: v.name, date: v.date, start: v.start, durationMin: Number(v.dur), lateMin: Number(v.late) }); } });
+          if (r) toast('Đã lưu');
+        }} />
+        {s.status === 'draft' && <Btn small tone="cb" kind="secondary" title="Xoá ca" icon="trash-outline" style={{ flex: 0.7 }} onPress={async () => {
+          if (!(await confirmBox({ title: 'Xoá ca thi?', message: 'Xoá ca, phòng thi và bản đề của ca. Không khôi phục được.', ok: 'Xoá', danger: true, tone: 'cb' }))) return;
+          await api.call('deleteSession', { sid }); toast('Đã xoá ca'); router.back();
+        }} />}
+      </View>}
       {mg && s.status === 'draft' && <Btn tone="cb" title="Mở phòng chờ" icon="enter-outline" onPress={act('', async () => { await api.call('openSession', { sid }); toast('Đã mở phòng chờ'); })} />}
       {mg && s.status === 'waiting' && !s.releasedAt && <Btn tone="cb" title="Ra lệnh phát đề" icon="megaphone-outline" onPress={act('', async () => {
         if (!(await confirmBox({ title: 'Ra lệnh phát đề?', message: 'Cán bộ coi thi các phòng đã điểm danh xong sẽ được mở niêm phong và phát đề. Mỗi phòng tính giờ từ lúc phòng đó phát.', ok: 'Ra lệnh', tone: 'cb' }))) return;
@@ -95,6 +106,7 @@ export default function CaHub() {
         {s.status !== 'draft' && <Row tone="cb" icon="desktop-outline" title="Màn hình bài làm" sub="Từng thí sinh, trực tiếp" onPress={() => router.push(`/cb/manhinh/${sid}`)} />}
         {s.status !== 'draft' && <Row tone="cb" icon="analytics-outline" title="Lịch sử làm bài" sub="Xếp theo mức nghi ngờ, xem lại từng thao tác" onPress={() => router.push(`/cb/lichsu/${sid}`)} />}
         {(mg || can(me, 'kythuat')) && s.status !== 'draft' && <Row tone="cb" icon="bar-chart-outline" title="Kết quả, chấm tự luận" sub={`${submitted} bài đã nộp`} onPress={() => router.push(`/cb/ketqua/${sid}`)} />}
+        {s.status === 'closed' && <Row tone="cb" icon="grid-outline" title="Bảng điểm các lớp" sub="Học sinh × các bài đã thi" onPress={() => router.push(`/cb/bangdiem?lop=${atts[0]?.className || ''}`)} />}
         <Row first={s.status === 'draft'} tone="cb" icon="warning-outline" title="Biên bản vi phạm" onPress={() => router.push(`/cb/vipham?sid=${sid}`)} />
         {mg && <Row tone="cb" icon="share-outline" title="Biên bản giao nhận đề" sub="Mã niêm phong, phòng, cán bộ coi thi" onPress={handover} />}
       </Card>

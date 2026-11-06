@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api } from '@/data/api';
-import { Btn, Card, Field, Icon, Loading, Muted, Note, Pill, Screen, Section, T, confirmBox, toast } from '@/ui/kit';
+import { Btn, Card, Field, Icon, Loading, Muted, Note, Pill, Screen, Section, T, confirmBox, formBox, toast } from '@/ui/kit';
 import { TYPE_TEXT } from '@/ui/exam';
 import { useMe, useQuery } from '@/ui/hooks';
 import { C, F } from '@/ui/theme';
@@ -20,9 +20,10 @@ export default function SoanDe() {
   const [sel, setSel] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(isNew);
   const [err, setErr] = useState('');
+  const [practice, setPractice] = useState(false);
   useEffect(() => {
     if (isNew) return;
-    api.getDoc<any>('exams/' + eid).then(e => { if (e) { setTitle(e.title); setSubject(e.subject); setDur(String(e.durationMin)); setSel((e.questions || []).map((q: any) => q.id)); } setLoaded(true); });
+    api.getDoc<any>('exams/' + eid).then(e => { if (e) { setTitle(e.title); setSubject(e.subject); setDur(String(e.durationMin)); setSel((e.questions || []).map((q: any) => q.id)); setPractice(!!e.practice); } setLoaded(true); });
   }, [eid, isNew]);
   if (!bank || !loaded) return <Loading tone="cb" />;
   const pool = bank.filter(q => !subject || q.subject === subject);
@@ -36,7 +37,7 @@ export default function SoanDe() {
     // giữ thứ tự phần như đề TN THPT: trắc nghiệm → đúng/sai → trả lời ngắn → tự luận
     const ord = { mcq: 0, tf: 1, short: 2, essay: 3 } as const;
     const qs = chosen.slice().sort((a, b) => ord[a.type] - ord[b.type]);
-    try { await api.setDoc('exams/' + id, { id, title: title.trim(), subject, durationMin: Number(dur) || 45, questions: JSON.parse(JSON.stringify(qs)), createdBy: me.uid, createdAt: Date.now() }); toast('Đã lưu đề'); router.back(); }
+    try { await api.setDoc('exams/' + id, { practice, id, title: title.trim(), subject, durationMin: Number(dur) || 45, questions: JSON.parse(JSON.stringify(qs)), createdBy: me.uid, createdAt: Date.now() }); toast('Đã lưu đề'); router.back(); }
     catch (e: any) { setErr(e.message); }
   };
   return (
@@ -64,6 +65,15 @@ export default function SoanDe() {
         );
       })}
       {!!err && <Note kind="bad" icon="alert-circle-outline" text={err} />}
+      {!isNew && <Card style={{ gap: 8 }}>
+        <T style={{ fontFamily: F.sb }}>Luyện tập</T>
+        <Muted style={{ fontSize: 13 }}>{practice ? 'Đề đang mở cho học sinh luyện tập (chấm ngay, xem đáp án).' : 'Mở đề này cho học sinh tự luyện tập. Đề dùng cho kiểm tra chính thức thì không nên mở.'}</Muted>
+        <Btn tone="cb" kind={practice ? 'secondary' : 'primary'} title={practice ? 'Đóng luyện tập' : 'Mở cho học sinh luyện tập'} onPress={async () => {
+          let classNames: string[] = [];
+          if (!practice) { const r = await formBox({ title: 'Mở luyện tập', tone: 'cb', ok: 'Mở', fields: [{ key: 'c', label: 'Chỉ cho các lớp (để trống = mọi lớp)', placeholder: '12A1, 12A2' }] }); if (!r) return; classNames = String(r.c || '').split(',').map(x => x.trim().toUpperCase()).filter(Boolean); }
+          try { await api.call('setPractice', { eid, on: !practice, classNames }); setPractice(!practice); toast(practice ? 'Đã đóng luyện tập' : 'Đã mở luyện tập'); } catch (e: any) { toast(e.message, true); }
+        }} />
+      </Card>}
       {!isNew && <Btn tone="cb" kind="ghost" title="Xoá đề" onPress={async () => { if (await confirmBox({ title: 'Xoá đề?', ok: 'Xoá', danger: true, tone: 'cb' })) { await api.deleteDoc('exams/' + eid); router.back(); } }} />}
     </Screen>
   );

@@ -22,7 +22,8 @@ export function AccountScreen({ tone }: { tone: Tone }) {
         </View>
       </Card>
       <Card pad={false}>
-        <Row first tone={tone} icon="key-outline" title="Đổi mật khẩu" onPress={() => formBox({
+        {me.role === 'student' && <Row first tone={tone} icon="chatbubble-ellipses-outline" title="Hỏi đáp" sub="Nhắn cán bộ kĩ thuật, giáo viên" onPress={() => router.push('/hoidap')} />}
+        <Row first={me.role !== 'student'} tone={tone} icon="key-outline" title="Đổi mật khẩu" onPress={() => formBox({
           title: 'Đổi mật khẩu', tone, ok: 'Đổi mật khẩu',
           fields: [{ key: 'o', label: 'Mật khẩu hiện tại', secure: true }, { key: 'n', label: 'Mật khẩu mới', secure: true, hint: 'Ít nhất 6 kí tự' }, { key: 'n2', label: 'Nhập lại mật khẩu mới', secure: true }],
           run: async v => { if (v.n !== v.n2) throw new Error('Hai lần nhập mật khẩu mới không khớp'); await api.changePassword(v.o, v.n); }

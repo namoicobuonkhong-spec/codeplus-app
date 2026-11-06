@@ -8,6 +8,9 @@ export default function QuanLi() {
   const me = useMe();
   const items: [boolean, string, string, any, string][] = [
     [isManager(me), 'Tạo ca thi', 'Chọn đề, lớp, tự chia phòng theo tên', 'add-circle-outline', '/cb/taoca'],
+    [true, 'Bảng điểm lớp', 'Học sinh × các bài thi, điểm TB, xếp loại, xuất Excel', 'grid-outline', '/cb/bangdiem'],
+    [true, 'Thống kê', 'Điểm TB, tỉ lệ đạt theo lớp, theo môn, theo ca', 'stats-chart-outline', '/cb/thongke'],
+    [true, 'Phúc khảo', 'Đơn của học sinh sau khi công bố điểm', 'document-text-outline', '/cb/phuckhao'],
     [isManager(me), 'Ngân hàng câu hỏi', 'Trắc nghiệm, đúng/sai, trả lời ngắn, tự luận', 'library-outline', '/cb/nganhang'],
     [isManager(me), 'Đề thi', 'Ghép câu hỏi thành đề', 'document-text-outline', '/cb/de'],
     [can(me, 'kythuat', 'bgh'), 'Học sinh', 'Danh sách theo lớp, cấp tài khoản', 'people-outline', '/cb/hocsinh'],

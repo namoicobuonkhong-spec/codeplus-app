@@ -37,6 +37,13 @@ service cloud.firestore {
     match /notices/{n} { allow read: if signed(); allow write: if false; }
     match /incidents/{i} { allow read: if isStaff(); allow write: if false; }
     match /meta/{m} { allow read: if signed(); allow write: if false; }
+    // đáp án công bố cùng điểm: chỉ thí sinh của ca đọc được
+    match /pubkeys/{sid} { allow read: if isStaff() || (signed() && request.auth.uid in resource.data.studentIds); allow write: if false; }
+    // luyện tập: danh sách đề mở cho mọi người; bài làm của ai người nấy đọc; đáp án chỉ máy chủ đọc
+    match /practiceList/{e} { allow read: if signed(); allow write: if false; }
+    match /practice/{p} { allow read: if isStaff() || (signed() && resource.data.uid == request.auth.uid); allow write: if false; }
+    match /practiceKeys/{p} { allow read, write: if false; }
+    match /appeals/{a} { allow read: if isStaff() || (signed() && resource.data.uid == request.auth.uid); allow write: if false; }
     // Hỏi đáp: mỗi học sinh một luồng (mã luồng = mã học sinh)
     match /threads/{tid} {
       allow read: if isStaff() || (signed() && tid == request.auth.uid);

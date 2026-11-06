@@ -59,6 +59,7 @@ export interface AttemptDoc {
   perQ?: Record<string, number>; essayScores?: Record<string, number>;
   away: boolean; awaySince?: number | null; lastSeen: number; lastEv?: Ev | null; metrics: Metrics; tail: Ev[];
   late?: string | null;
+  extraMin?: number;
 }
 
 // ---------------------------------------------------------------- tiện ích
@@ -179,7 +180,7 @@ export const STEP_TEXT_HS: Record<RoomStep, string> = {
 export const LOG_TEXT: Record<string, string> = {
   mophong: 'Mở phòng chờ', nhan: 'Nhận phòng', diemdanh: 'Chốt điểm danh', lenh: 'Lệnh phát đề', yeucau: 'Mở niêm phong, đề nghị phát',
   huy: 'Huỷ đề nghị', xacnhan: 'CBCT2 xác nhận', phat: 'Đã phát đề', phatthay: 'Quản lí ca phát thay', dongloat: 'Phát đồng loạt',
-  bosung: 'Phát bổ sung (đến muộn)', dong: 'Kết thúc ca thi', congbo: 'Công bố điểm'
+  bosung: 'Phát bổ sung (đến muộn)', dong: 'Kết thúc ca thi', congbo: 'Công bố điểm', conggio: 'Cộng giờ', lamlai: 'Cho làm lại bài'
 };
 export function roomStep(r: RoomDoc, s: SessionDoc): RoomStep {
   if (r.startedAt) return 'daphat';

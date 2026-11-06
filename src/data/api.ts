@@ -27,6 +27,7 @@ export interface Backend {
   setDoc(path: string, data: any, merge?: boolean): Promise<void>;
   deleteDoc(path: string): Promise<void>;
   createUser(u: NewUser): Promise<void>;
+  resetPassword(uid: string, password: string): Promise<void>;
   /** Giờ máy chủ (ms) */
   now(): number;
   resetDemo?(): Promise<void>;

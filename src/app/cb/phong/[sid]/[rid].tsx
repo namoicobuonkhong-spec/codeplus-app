@@ -57,6 +57,10 @@ export default function Phong() {
     if (v) await call('late', { uid: a.uid, reason: v.reason }, 'Đã phát bổ sung');
   };
 
+  const extendRoom = async () => {
+    const v = await formBox({ title: `Cộng giờ cả ${r.name}`, tone: 'cb', ok: 'Cộng giờ', message: 'Áp dụng cho mọi em đang làm bài trong phòng.', fields: [{ key: 'm', label: 'Số phút', value: '5', keyboard: 'numeric' }, { key: 'reason', label: 'Lí do', placeholder: 'Ví dụ: mất điện 5 phút' }] });
+    if (v) { const x = await call('extend', { minutes: Number(v.m), reason: v.reason }); if (x) toast(`Đã cộng giờ cho ${x.n} em`); }
+  };
   let action: React.ReactNode = null;
   if (mine && open) {
     if (!r.checkin[me.uid]) action = <Note kind="info" text={`Bước 1 · Bấm "Nhận phòng" khi bạn đã có mặt tại ${r.name}. Hệ thống ghi giờ nhận phòng.`} />;
@@ -76,8 +80,12 @@ export default function Phong() {
       </>)
         : step === 'sansang' ? <Btn tone="cb" title={twoProctors ? 'Mở niêm phong, đề nghị phát' : 'Mở niêm phong, phát đề'} icon="lock-open-outline" onPress={request} />
           : step === 'choxacnhan' ? (r.req?.by === me.uid ? <Btn tone="cb" kind="secondary" title="Huỷ đề nghị" onPress={() => call('cancel', {}, 'Đã huỷ')} /> : <Btn tone="cb" title="Xác nhận phát đề" icon="shield-checkmark-outline" onPress={confirm} />)
-            : step === 'daphat' ? <Btn tone="cb" kind="secondary" title="Màn hình bài làm phòng này" icon="desktop-outline" onPress={() => router.push(`/cb/manhinh/${sid}?room=${rid}`)} /> : undefined
-  ) : mg && open && !r.startedAt ? <Btn tone="cb" kind="secondary" title="Quản lí ca: phát thay phòng này" onPress={force} /> : undefined;
+            : step === 'daphat' ? <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Btn tone="cb" kind="secondary" title="Màn hình bài làm" icon="desktop-outline" onPress={() => router.push(`/cb/manhinh/${sid}?room=${rid}`)} style={{ flex: 1.3 }} />
+              {s.status === 'running' && <Btn tone="cb" kind="secondary" title="Cộng giờ phòng" icon="time-outline" onPress={extendRoom} style={{ flex: 1 }} />}
+            </View> : undefined
+  ) : mg && open && !r.startedAt ? <Btn tone="cb" kind="secondary" title="Quản lí ca: phát thay phòng này" onPress={force} />
+    : mg && s.status === 'running' && r.startedAt ? <Btn tone="cb" kind="secondary" title="Cộng giờ cả phòng" icon="time-outline" onPress={extendRoom} /> : undefined;
 
   return (
     <Screen tone="cb" title={`${r.name}${r.place ? ' · ' + r.place : ''}`} sub={`${s.examTitle} · ${r.students.length} thí sinh`} back footer={footer}>

@@ -47,7 +47,8 @@
         {
           "faceIDPermission": "Xác nhận phát đề bằng Face ID"
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": false,

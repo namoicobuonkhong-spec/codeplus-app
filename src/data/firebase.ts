@@ -26,6 +26,7 @@ export function createFirebaseBackend(): Backend {
   const fns = getFunctions(app, FUNCTIONS_REGION);
   const apiFn = httpsCallable<{ name: string; data: any }, any>(fns, 'api');
   const createUserFn = httpsCallable<NewUser, any>(fns, 'createUser');
+  const resetFn = httpsCallable<{ uid: string; password: string }, any>(fns, 'resetPassword');
   let offset = 0;
 
   const ref = (path: string) => doc(db, path);
@@ -71,6 +72,7 @@ export function createFirebaseBackend(): Backend {
     async setDoc(path, data, merge) { try { await fsSetDoc(ref(path), data, { merge: !!merge }); } catch (e) { throw viErr(e); } },
     async deleteDoc(path) { try { await fsDeleteDoc(ref(path)); } catch (e) { throw viErr(e); } },
     async createUser(n) { try { await createUserFn(n); } catch (e) { throw viErr(e); } },
+    async resetPassword(uid, password) { try { await resetFn({ uid, password }); } catch (e) { throw viErr(e); } },
     now: () => Date.now() + offset
   };
 }

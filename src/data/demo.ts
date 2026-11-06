@@ -153,6 +153,7 @@ export function createDemoBackend(): Backend {
     await run('assignProctors', { sid: s1, rid: 'R2', proctors: ['u-gt3', 'u-gt4'] }, mgr, T);
     await run('openSession', { sid: s1 }, mgr, T);
     db.docs['meta/demo'] = { live: s2, main: s1 };
+    await run('setPractice', { eid: 'E2', on: true }, mgr, T);
 
     // Ca sắp tới (nháp)
     const s4 = await mk({ examId: 'E2', name: 'Kiểm tra 15 phút — Toán 12 (lần 2)', date: inDays(5), start: '13:30', classNames: ['12A1'], roomSize: 12, places: ['Phòng máy 2'] }, T);
@@ -300,6 +301,14 @@ export function createDemoBackend(): Backend {
       mark('users/' + uid); mark('#pass');
       db.docs['users/' + uid] = { uid, role: n.role, name: n.name.trim(), username, className: n.className || undefined, staffRoles: n.staffRoles, position: n.position };
       save(); notify();
+    },
+    async resetPassword(uid, password) {
+      await ready; if (web) loadSync();
+      if (!me || me.role !== 'staff') throw new Error('Không có quyền');
+      if (password.length < 6) throw new Error('Mật khẩu cần ít nhất 6 kí tự');
+      const e = Object.values(db.pass).find(p => p.uid === uid);
+      if (!e) throw new Error('Không có tài khoản');
+      e.password = password; mark('#pass'); save();
     },
     now: () => Date.now(),
     async resetDemo() { await seed(); notify(); }

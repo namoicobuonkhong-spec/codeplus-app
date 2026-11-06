@@ -65,6 +65,16 @@ export default function ThiSinh() {
     if (!r) return;
     try { await api.call('incident', { sid, uid, kind: KINDS[Math.max(0, Math.min(5, Number(r.k) - 1))] || 'Khác', note: r.note }); toast('Đã ghi biên bản'); } catch (e: any) { toast(e.message, true); }
   };
+  const extend = async () => {
+    const r = await formBox({ title: `Cộng giờ · ${a.name}`, tone: 'cb', ok: 'Cộng giờ', fields: [{ key: 'm', label: 'Số phút (âm để trừ)', value: '5', keyboard: 'numeric' }, { key: 'reason', label: 'Lí do', placeholder: 'Ví dụ: máy treo 5 phút' }],
+      run: async v => { await api.call('extend', { sid, uid, minutes: Number(v.m), reason: v.reason }); } });
+    if (r) toast('Đã cộng giờ');
+  };
+  const reset = async () => {
+    const r = await formBox({ title: `Cho làm lại · ${a.name}`, tone: 'cb', ok: 'Xoá bài, cho làm lại', danger: true, message: 'Bài đang làm bị xoá hết. Sau đó CBCT bấm "Phát bổ sung" cho em ở màn hình phòng thi; giờ nộp như cả phòng (cộng giờ nếu cần).', fields: [{ key: 'reason', label: 'Lí do', placeholder: 'Ví dụ: hỏng máy, đổi máy khác' }],
+      run: async v => { await api.call('resetAttempt', { sid, uid, reason: v.reason }); } });
+    if (r) toast('Đã xoá bài — phát bổ sung cho em ở phòng thi');
+  };
   const gradeEssay = async (eq: Question) => {
     const r = await formBox({ title: 'Chấm tự luận', tone: 'cb', ok: 'Lưu điểm', message: (a.answers?.[eq.id] || '(bỏ trống)').slice(0, 1500), fields: [{ key: 'v', label: `Điểm (tối đa ${num(eq.points)})`, keyboard: 'decimal-pad', value: a.essayScores?.[eq.id] != null ? String(a.essayScores[eq.id]) : '' }] });
     if (!r) return;
@@ -75,12 +85,17 @@ export default function ThiSinh() {
 
   return (
     <Screen tone="cb" title={a.name} sub={`SBD ${a.sbd} · ${a.className} · ${room?.name || ''}`} back
-      footer={<View style={{ flexDirection: 'row', gap: 8 }}><Btn tone="cb" kind="secondary" title="Ghi vi phạm" icon="warning-outline" onPress={incident} style={{ flex: 1 }} /></View>}>
+      footer={<View style={{ flexDirection: 'row', gap: 8 }}>
+        <Btn tone="cb" kind="secondary" title="Vi phạm" icon="warning-outline" onPress={incident} style={{ flex: 1 }} />
+        {s.status === 'running' && a.startedAt && !a.submitted && <Btn tone="cb" kind="secondary" title="+ Giờ" icon="time-outline" onPress={extend} style={{ flex: 1 }} />}
+        {s.status === 'running' && isManager(me) && a.startedAt && <Btn tone="cb" kind="secondary" title="Làm lại" icon="refresh-outline" onPress={reset} style={{ flex: 1 }} />}
+      </View>}>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         <Pill text={a.submitted ? 'Đã nộp ' + fmtTime(a.submittedAt) : a.startedAt ? 'Đang làm bài' : 'Chưa nhận đề'} kind={a.submitted ? 'ok' : 'info'} />
         {view.away && <Pill text={replay ? 'Đang rời app' : `Rời app ${fmtDur(now - (a.awaySince || now))}`} kind="bad" />}
         <Pill text={sc.level === 'cao' ? `Nghi ngờ cao · ${sc.score}` : sc.level === 'vua' ? `Nghi ngờ vừa · ${sc.score}` : 'Bình thường'} kind={sc.level === 'cao' ? 'bad' : sc.level === 'vua' ? 'warn' : 'ok'} />
         {a.deadline && !a.submitted && <Pill text={'Còn ' + clock(a.deadline - now)} kind="muted" />}
+        {!!a.extraMin && <Pill text={`Cộng ${a.extraMin} phút`} kind="info" />}
       </View>
       <Seg tone="cb" value={tab} onChange={v => { setTab(v); }} options={[['live', 'Màn hình bài làm'], ['log', `Lịch sử (${events.length})`]]} />
 

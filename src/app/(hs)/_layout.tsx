@@ -17,8 +17,8 @@ export default function HsTabs() {
     <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: C.hs, tabBarInactiveTintColor: C.muted, tabBarLabelStyle: { fontFamily: F.sb, fontSize: 11.5 }, tabBarStyle: { borderTopColor: C.line, height: 62 + ins.bottom, paddingTop: 6, paddingBottom: ins.bottom + 6 } }}>
       <Tabs.Screen name="index" options={tab('Trang chủ', 'home-outline')} />
       <Tabs.Screen name="lich" options={tab('Lịch thi', 'calendar-outline')} />
-      <Tabs.Screen name="ketqua" options={tab('Kết quả', 'bar-chart-outline')} />
-      <Tabs.Screen name="hoidap" options={tab('Hỏi đáp', 'chatbubble-ellipses-outline')} />
+      <Tabs.Screen name="luyentap" options={tab('Luyện tập', 'barbell-outline')} />
+      <Tabs.Screen name="bangdiem" options={tab('Bảng điểm', 'ribbon-outline')} />
       <Tabs.Screen name="toi" options={tab('Tài khoản', 'person-circle-outline')} />
     </Tabs>
   );

@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Avatar, Card, Empty, Icon, Loading, Muted, Pill, Section, T } from '@/ui/kit';
+import { Avatar, Card, Empty, Icon, Loading, Muted, Section, T } from '@/ui/kit';
 import { useMe, useQuery } from '@/ui/hooks';
 import { examState, useMyExams } from '@/ui/student';
 import { C, F, ago, fmtDate, initials, weekday } from '@/ui/theme';
@@ -26,6 +26,9 @@ export default function HsHome() {
           <Muted style={{ fontSize: 13 }}>Lớp {me.className}</Muted>
           <T style={{ fontFamily: F.b, fontSize: 18 }}>{me.name}</T>
         </View>
+        <Pressable accessibilityRole="button" accessibilityLabel="Hỏi đáp" onPress={() => router.push('/hoidap')} style={{ width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: C.line, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="chatbubble-ellipses-outline" size={21} color={C.hs} />
+        </Pressable>
       </View>
 
       {now.length === 0 && (
@@ -72,8 +75,6 @@ export default function HsHome() {
           </View>
         </Card>
       )) : <Card><Empty text="Chưa có thông báo" icon="notifications-off-outline" /></Card>}
-      <View style={{ height: 8 }} />
-      <Pill text="Mọi thông báo của nhà trường hiện ở đây" kind="muted" />
     </ScrollView>
   );
 }

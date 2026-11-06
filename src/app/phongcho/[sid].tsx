@@ -43,7 +43,7 @@ export default function PhongCho() {
   const vang = room?.roll?.[me.uid] === 'vang';
   return (
     <Screen tone="hs" title={room ? `${room.name}${room.place ? ' · ' + room.place : ''}` : 'Phòng chờ'} sub={`SBD ${a.sbd} · ${me.name}`} back
-      footer={<Btn title="Nhắn cán bộ coi thi" kind="secondary" icon="chatbubble-ellipses-outline" onPress={() => router.push('/(hs)/hoidap')} />}>
+      footer={<Btn title="Nhắn cán bộ coi thi" kind="secondary" icon="chatbubble-ellipses-outline" onPress={() => router.push('/hoidap')} />}>
       <View style={{ gap: 6, marginTop: 4 }}>
         <Label style={{ color: C.hs }}>PHÒNG CHỜ</Label>
         <H1 style={{ fontSize: 25 }}>{a.submitted ? 'Em đã nộp bài' : s.status === 'closed' ? 'Ca thi đã kết thúc' : step === 'daphat' && !a.startedAt ? 'Phòng đã phát đề' : 'Đang chờ cán bộ coi thi phát đề'}</H1>
