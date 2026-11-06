@@ -21,16 +21,19 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
-      - run: sudo xcode-select -s /Applications/Xcode_26.app || sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"; xcodebuild -version
+      - run: ls -d /Applications/Xcode*.app; X=$(ls -d /Applications/Xcode_26.1*.app /Applications/Xcode_26.0*.app 2>/dev/null | head -1); [ -n "$X" ] || X=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1); echo "Dùng $X"; sudo xcode-select -s "$X"; xcodebuild -version
       - run: npm ci
       - run: npx expo prebuild --platform ios
       - run: |
           cd ios
           WS=$(ls -d *.xcworkspace | head -1); SCHEME="${WS%.xcworkspace}"
-          set -o pipefail
-          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
-            -archivePath build/app.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > build.log 2>&1 \
-            || { grep -E "error:|Error:|fatal|❌" build.log | sort -u | head -25 | while IFS= read -r l; do echo "::error::$l"; done; tail -40 build.log | while IFS= read -r l; do echo "::warning::$l"; done; exit 1; }
+          build() {
+            xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+              -archivePath build/app.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" "$@" > build.log 2>&1
+          }
+          report() { grep -E "error:|fatal" build.log | sort -u | head -25 | while IFS= read -r l; do echo "::error::$l"; done; }
+          # Xcode mới bắt lỗi đồng thời của Swift 6 trong một số thư viện Expo: thử lại ở chế độ ngôn ngữ Swift 5
+          build || { report; grep -q "risks causing data races\|concurrency" build.log && { echo "::warning::Thử lại với SWIFT_VERSION=5"; build SWIFT_VERSION=5 SWIFT_STRICT_CONCURRENCY=minimal || { report; exit 1; }; } || exit 1; }
           mkdir -p Payload && cp -R build/app.xcarchive/Products/Applications/*.app Payload/
           zip -qr ../codeplus-thi-unsigned.ipa Payload
       - uses: actions/upload-artifact@v4
