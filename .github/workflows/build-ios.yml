@@ -1,0 +1,32 @@
+# Dựng tệp .ipa CHƯA KÍ cho iOS (máy macOS của GitHub). Chạy tay: Actions → iOS IPA → Run workflow.
+# iPhone chỉ cài được sau khi kí: dùng Sideloadly/AltStore với Apple ID (hết hạn sau 7 ngày),
+# hoặc tài khoản Apple Developer (99 USD/năm) để kí, đưa lên TestFlight/App Store.
+name: iOS IPA (chưa kí)
+on:
+  workflow_dispatch:
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 90
+    env:
+      EXPO_PUBLIC_FIREBASE_API_KEY: ${{ secrets.EXPO_PUBLIC_FIREBASE_API_KEY }}
+      EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      EXPO_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_PROJECT_ID }}
+      EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      EXPO_PUBLIC_FIREBASE_APP_ID: ${{ secrets.EXPO_PUBLIC_FIREBASE_APP_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npx expo prebuild --platform ios
+      - run: |
+          cd ios
+          WS=$(ls -d *.xcworkspace | head -1); SCHEME="${WS%.xcworkspace}"
+          xcodebuild -workspace "$WS" -scheme "$SCHEME" -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath build/app.xcarchive archive CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          mkdir -p Payload && cp -R build/app.xcarchive/Products/Applications/*.app Payload/
+          zip -qr ../codeplus-thi-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with: { name: codeplus-thi-ios, path: codeplus-thi-unsigned.ipa }

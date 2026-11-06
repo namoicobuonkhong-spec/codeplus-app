@@ -1,0 +1,50 @@
+rules_version = '2';
+// Quy tắc truy cập Firestore. Mọi thao tác nghiệp vụ (phát đề, lưu/nộp bài, tạo ca…) đi qua Cloud Functions
+// nên phần lớn dữ liệu chỉ cho ĐỌC; app chỉ ghi trực tiếp ngân hàng câu hỏi, đề và tin nhắn hỏi đáp.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signed() { return request.auth != null; }
+    function me() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function isStaff() { return signed() && me().role == 'staff'; }
+    function hasRole(r) { return isStaff() && me().staffRoles.hasAny([r, 'admin']); }
+    function canManage() { return hasRole('quanli') || hasRole('bgh'); }
+
+    match /users/{uid} {
+      allow read: if signed() && (request.auth.uid == uid || isStaff());
+      allow write: if false;
+    }
+    match /sessions/{sid} {
+      allow read: if isStaff() || (signed() && request.auth.uid in resource.data.studentIds);
+      allow write: if false;
+      match /rooms/{rid} {
+        allow read: if isStaff() || (signed() && request.auth.uid in resource.data.students);
+        allow write: if false;
+      }
+      // Đề: học sinh chỉ đọc được khi bài của em đã được phát (có giờ bắt đầu)
+      match /paper/{p} {
+        allow read: if isStaff() || (signed() && get(/databases/$(database)/documents/attempts/$(sid + '_' + request.auth.uid)).data.startedAt != null);
+        allow write: if false;
+      }
+    }
+    match /keys/{sid} { allow read: if canManage(); allow write: if false; }
+    match /attempts/{aid} {
+      allow read: if isStaff() || (signed() && resource.data.uid == request.auth.uid);
+      allow write: if false;
+      match /events/{e} { allow read: if isStaff(); allow write: if false; }
+    }
+    match /bank/{q} { allow read, write: if canManage(); }
+    match /exams/{e} { allow read, write: if canManage(); }
+    match /notices/{n} { allow read: if signed(); allow write: if false; }
+    match /incidents/{i} { allow read: if isStaff(); allow write: if false; }
+    match /meta/{m} { allow read: if signed(); allow write: if false; }
+    // Hỏi đáp: mỗi học sinh một luồng (mã luồng = mã học sinh)
+    match /threads/{tid} {
+      allow read: if isStaff() || (signed() && tid == request.auth.uid);
+      allow create, update: if isStaff() || (signed() && tid == request.auth.uid && request.resource.data.uid == request.auth.uid);
+      match /msgs/{m} {
+        allow read: if isStaff() || (signed() && tid == request.auth.uid);
+        allow create: if signed() && request.resource.data.from == request.auth.uid && (isStaff() || tid == request.auth.uid);
+      }
+    }
+  }
+}
