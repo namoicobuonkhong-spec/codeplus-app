@@ -4,6 +4,8 @@
 name: iOS IPA (chưa kí)
 on:
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   ios:
     runs-on: macos-15
@@ -30,3 +32,9 @@ jobs:
           zip -qr ../codeplus-thi-unsigned.ipa Payload
       - uses: actions/upload-artifact@v4
         with: { name: codeplus-thi-ios, path: codeplus-thi-unsigned.ipa }
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-${{ github.run_number }}
+          name: iOS bản ${{ github.run_number }} (chưa kí)
+          body: Tệp .ipa chưa kí — cài bằng Sideloadly/AltStore với Apple ID, hoặc kí bằng tài khoản Apple Developer.
+          files: codeplus-thi-unsigned.ipa

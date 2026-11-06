@@ -6,6 +6,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -29,3 +31,9 @@ jobs:
       - run: cp android/app/build/outputs/apk/release/app-release.apk codeplus-thi.apk
       - uses: actions/upload-artifact@v4
         with: { name: codeplus-thi-android, path: codeplus-thi.apk }
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-${{ github.run_number }}
+          name: Android bản ${{ github.run_number }}
+          body: Tải tệp codeplus-thi.apk bên dưới về điện thoại Android để cài.
+          files: codeplus-thi.apk
